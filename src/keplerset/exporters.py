@@ -1,14 +1,10 @@
 from __future__ import annotations
 
-import csv
-import io
-import json
 import re
-from html import escape
 from pathlib import Path
-from typing import Iterable
 
 from .models import ElementSetProfile
+from .paths import atomic_write_bytes
 
 
 def _alias_map(profile: ElementSetProfile) -> dict[int, str]:
@@ -22,7 +18,7 @@ def _alias_map(profile: ElementSetProfile) -> dict[int, str]:
 def apply_3le_aliases(text: str, profile: ElementSetProfile) -> str:
     """Replace 3LE line 0 names while preserving Space-Track line 1/2 verbatim.
 
-    A 3LE stream is interpreted as triples: line 0, line 1, line 2.  The NORAD
+    A 3LE stream is interpreted as triples: line 0, line 1, line 2. The NORAD
     ID is taken from line 1. Alpha-5 catalog numbers are decoded so aliases
     also work for the expanded catalog.
     """
@@ -61,19 +57,17 @@ def decode_tle_catalog_field(field: str) -> int:
     prefix = value[0]
     if prefix not in _ALPHA5_PREFIX:
         raise ValueError(f"Invalid Alpha-5 prefix: {prefix}")
-    # A=10, B=11, ... H=17, J=18, ... Z=33.
     prefix_value = 10 + _ALPHA5_PREFIX.index(prefix)
     return prefix_value * 10_000 + int(value[1:])
 
 
 def write_native_result(profile: ElementSetProfile, data: bytes, output_path: Path) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
     if profile.format == "3le" and profile.apply_aliases:
         text = data.decode("utf-8-sig", errors="replace")
         text = apply_3le_aliases(text, profile)
-        output_path.write_text(text, encoding="utf-8", newline="")
+        atomic_write_bytes(output_path, text.encode("utf-8"))
     else:
-        output_path.write_bytes(data)
+        atomic_write_bytes(output_path, data)
 
 
 def parse_satellite_list(text: str) -> list[tuple[int, str]]:
