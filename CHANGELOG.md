@@ -1,12 +1,24 @@
 # Changelog
 
+## 0.2.5 - 2026-08-19
+
+- Fixed macOS exports failing with read-only filesystem errors when a relative profile path inherited the packaged app's launch directory.
+- New GUI profiles now default to an absolute file in the user's Documents folder.
+- Relative GUI profile paths resolve under the user's Documents folder; CLI relative paths continue to resolve against the shell working directory unless `--base-dir` is supplied.
+- Added Windows Documents Known Folder lookup so redirected Documents/OneDrive configurations are honored, with safe fallbacks.
+- Added export-destination preflight before any Space-Track authentication or GP request.
+- Added clearer errors for missing, non-directory, read-only, and otherwise unwritable export destinations.
+- Export files are now written to a same-directory temporary file and atomically replaced after a complete successful write.
+- Hardened packaged Tk save/open dialogs with explicit initial directories, current output filenames, macOS-safe all-files patterns, and a fallback when bundled Tcl/Tk rejects file-type filters.
+- Updated all GUI entry points to install the dialog fixes while leaving the CLI free of GUI initialization.
+- Expanded regression coverage for path resolution, preflight ordering, atomic writes, and dialog options.
+
 ## 0.2.2 - 2026-08-19
 
 - Fixed tagged-release gating so **any pushed tag** triggers the release path, not only tags beginning with `v`.
 - Release job now uses `github.ref_type == 'tag'` and explicitly checks that both native build jobs succeeded.
 - Added `always()` to the release job condition so dependency evaluation is explicit while still refusing to publish if either platform build fails.
 - Synchronized the package `__version__` value with project metadata.
-
 
 ## 0.2.1 - 2026-08-19
 
