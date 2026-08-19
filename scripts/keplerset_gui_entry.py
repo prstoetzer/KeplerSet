@@ -1,4 +1,4 @@
-from keplerset.gui import main
+from keplerset.gui_entry import main
 
 
 if __name__ == "__main__":
