@@ -37,7 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--base-dir",
         type=Path,
         default=None,
-        help="Base directory for relative output paths",
+        help="Base directory for relative output paths (default: current directory)",
     )
     return parser
 
@@ -51,12 +51,13 @@ def main(argv: list[str] | None = None) -> int:
     if not password:
         password = getpass.getpass("Space-Track password: ")
     profile = _find_profile(args.profile)
+    base_dir = args.base_dir if args.base_dir is not None else Path.cwd()
     try:
         outcome = export_profile(
             profile,
             identity,
             password,
-            base_dir=args.base_dir,
+            base_dir=base_dir,
             progress=lambda msg: print(msg, file=sys.stderr),
         )
     except Exception as exc:
