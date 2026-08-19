@@ -4,6 +4,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .paths import user_documents_dir
+
 
 SUPPORTED_FORMATS: dict[str, str] = {
     "tle": "TLE (2-line, Space-Track native)",
@@ -26,6 +28,10 @@ DEFAULT_EXTENSIONS: dict[str, str] = {
 }
 
 
+def _default_output_path() -> str:
+    return str(user_documents_dir() / "elements.txt")
+
+
 @dataclass(slots=True)
 class SatelliteEntry:
     norad_cat_id: int
@@ -43,7 +49,7 @@ class SatelliteEntry:
 class ElementSetProfile:
     name: str = "New Set"
     format: str = "3le"
-    output_path: str = "elements.txt"
+    output_path: str = field(default_factory=_default_output_path)
     satellites: list[SatelliteEntry] = field(default_factory=list)
     apply_aliases: bool = True
     order_by: str = "NORAD_CAT_ID asc"
@@ -54,6 +60,8 @@ class ElementSetProfile:
             raise ValueError("Profile name cannot be empty.")
         if self.format not in SUPPORTED_FORMATS:
             raise ValueError(f"Unsupported format: {self.format}")
+        if not self.output_path.strip():
+            raise ValueError("Choose an output file before exporting.")
         if not self.satellites:
             raise ValueError("The element set has no satellites.")
         seen: set[int] = set()
@@ -73,8 +81,8 @@ class ElementSetProfile:
         path = Path(self.output_path).expanduser()
         if not path.suffix:
             path = path.with_suffix(DEFAULT_EXTENSIONS[self.format])
-        if not path.is_absolute() and base_dir is not None:
-            path = base_dir / path
+        if not path.is_absolute():
+            path = (base_dir if base_dir is not None else user_documents_dir()) / path
         return path
 
     def to_dict(self) -> dict[str, Any]:
@@ -90,10 +98,11 @@ class ElementSetProfile:
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "ElementSetProfile":
+        output_path = str(value.get("output_path", "")).strip() or _default_output_path()
         return cls(
             name=str(value.get("name", "New Set")),
             format=str(value.get("format", "3le")),
-            output_path=str(value.get("output_path", "elements.txt")),
+            output_path=output_path,
             satellites=[SatelliteEntry.from_dict(x) for x in value.get("satellites", [])],
             apply_aliases=bool(value.get("apply_aliases", True)),
             order_by=str(value.get("order_by", "NORAD_CAT_ID asc")),
