@@ -6,6 +6,7 @@ from typing import Callable
 
 from .exporters import write_native_result
 from .models import ElementSetProfile
+from .paths import preflight_output_path
 from .spacetrack import QueryResult, SpaceTrackClient
 
 
@@ -26,8 +27,11 @@ def export_profile(
     progress: Callable[[str], None] | None = None,
 ) -> ExportOutcome:
     profile.validate()
-    output = profile.normalized_output_path(base_dir)
     log = progress or (lambda _msg: None)
+
+    candidate = profile.normalized_output_path(base_dir)
+    log(f"Checking export destination {candidate}…")
+    output = preflight_output_path(candidate)
 
     log("Authenticating with Space-Track…")
     client = SpaceTrackClient(identity, password)
