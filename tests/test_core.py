@@ -1,10 +1,21 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
-from keplerset.exporters import apply_3le_aliases, decode_tle_catalog_field, parse_satellite_list
+from keplerset.exporters import (
+    apply_3le_aliases,
+    decode_tle_catalog_field,
+    parse_satellite_list,
+    write_native_result,
+)
+from keplerset.gui_entry import _normalized_filetypes, _save_dialog_options
 from keplerset.models import ElementSetProfile, SatelliteEntry
+from keplerset.paths import OutputPathError, atomic_write_bytes, preflight_output_path, user_documents_dir
 from keplerset.satcat import SatcatRecord, SatcatSearch, search_satcat
+from keplerset.service import export_profile
 from keplerset.spacetrack import SpaceTrackClient
 
 
@@ -142,6 +153,104 @@ class SatcatTests(unittest.TestCase):
     def test_numeric_search_prioritizes_exact_catalog_number(self):
         result = search_satcat(self._records(), SatcatSearch(text="25544"), limit=None)
         self.assertEqual(result[0].norad_cat_id, 25544)
+
+
+class FilesystemTests(unittest.TestCase):
+    @staticmethod
+    def _profile(output_path: str) -> ElementSetProfile:
+        return ElementSetProfile(
+            name="filesystem-test",
+            format="json",
+            output_path=output_path,
+            satellites=[SatelliteEntry(25544, "ISS")],
+        )
+
+    def test_default_output_path_is_absolute_user_document_path(self):
+        profile = ElementSetProfile()
+        self.assertTrue(Path(profile.output_path).is_absolute())
+        self.assertEqual(Path(profile.output_path).parent, user_documents_dir())
+
+    def test_relative_gui_path_uses_documents_by_default(self):
+        profile = self._profile("elements.json")
+        self.assertEqual(
+            profile.normalized_output_path(), user_documents_dir() / "elements.json"
+        )
+
+    def test_explicit_base_dir_preserves_cli_semantics(self):
+        profile = self._profile("elements.json")
+        with tempfile.TemporaryDirectory() as temp:
+            base = Path(temp)
+            self.assertEqual(profile.normalized_output_path(base), base / "elements.json")
+
+    def test_preflight_accepts_existing_writable_directory(self):
+        with tempfile.TemporaryDirectory() as temp:
+            target = Path(temp) / "elements.json"
+            self.assertEqual(preflight_output_path(target), target.resolve())
+            self.assertFalse(target.exists())
+
+    def test_preflight_rejects_missing_parent(self):
+        with tempfile.TemporaryDirectory() as temp:
+            target = Path(temp) / "missing" / "elements.json"
+            with self.assertRaises(OutputPathError):
+                preflight_output_path(target)
+
+    def test_preflight_happens_before_spacetrack_client_creation(self):
+        with tempfile.TemporaryDirectory() as temp:
+            profile = self._profile(str(Path(temp) / "missing" / "elements.json"))
+            with patch("keplerset.service.SpaceTrackClient") as client:
+                with self.assertRaises(OutputPathError):
+                    export_profile(profile, "identity", "password")
+                client.assert_not_called()
+
+    def test_atomic_write_replaces_complete_file(self):
+        with tempfile.TemporaryDirectory() as temp:
+            target = Path(temp) / "elements.json"
+            target.write_bytes(b"old")
+            atomic_write_bytes(target, b"new-complete-data")
+            self.assertEqual(target.read_bytes(), b"new-complete-data")
+            leftovers = list(Path(temp).glob(".elements.json.keplerset-*.tmp"))
+            self.assertEqual(leftovers, [])
+
+    def test_native_writer_uses_atomic_destination(self):
+        with tempfile.TemporaryDirectory() as temp:
+            target = Path(temp) / "elements.json"
+            profile = self._profile(str(target))
+            write_native_result(profile, b'{"ok":true}', target)
+            self.assertEqual(target.read_bytes(), b'{"ok":true}')
+
+
+class DialogTests(unittest.TestCase):
+    class _Var:
+        def __init__(self, value: str):
+            self.value = value
+
+        def get(self) -> str:
+            return self.value
+
+    class _Parent:
+        def __init__(self, value: str):
+            self.output_var = DialogTests._Var(value)
+
+    def test_save_dialog_uses_current_absolute_parent_and_filename(self):
+        with tempfile.TemporaryDirectory() as temp:
+            current = Path(temp) / "amateur.tle"
+            options = _save_dialog_options(
+                {"parent": self._Parent(str(current)), "defaultextension": ".tle"}
+            )
+            self.assertEqual(options["initialdir"], str(Path(temp)))
+            self.assertEqual(options["initialfile"], "amateur.tle")
+
+    def test_save_dialog_relative_path_starts_in_documents(self):
+        options = _save_dialog_options(
+            {"parent": self._Parent("elements.txt"), "defaultextension": ".txt"}
+        )
+        self.assertEqual(options["initialdir"], str(user_documents_dir()))
+        self.assertEqual(options["initialfile"], "elements.txt")
+
+    def test_macos_all_files_pattern_is_unix_safe(self):
+        with patch("keplerset.gui_entry.sys.platform", "darwin"):
+            types = _normalized_filetypes([("All files", "*.*")])
+        self.assertEqual(types, [("All files", "*")])
 
 
 if __name__ == "__main__":
