@@ -1,0 +1,11 @@
+{
+  "name": "Example Amateur Satellites",
+  "format": "3le",
+  "output_path": "amateur.txt",
+  "apply_aliases": true,
+  "satellites": [
+    {"norad_cat_id": 25544, "alias": "ISS"},
+    {"norad_cat_id": 43017, "alias": "AO-91"},
+    {"norad_cat_id": 43137, "alias": "AO-92"}
+  ]
+}

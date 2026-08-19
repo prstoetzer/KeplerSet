@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "keplerset"
+version = "0.2.1"
+description = "Modern cross-platform HalloKepler replacement using the Space-Track GP and SATCAT APIs"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{name = "KeplerSet contributors"}]
+license = {text = "MIT"}
+dependencies = []
+
+[project.scripts]
+keplerset-cli = "keplerset.cli:main"
+
+[project.gui-scripts]
+keplerset = "keplerset.gui:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

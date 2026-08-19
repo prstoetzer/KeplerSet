@@ -1,0 +1,4 @@
+# Example KeplerSet import list: NORAD ID, alias
+25544,ISS
+43017,AO-91
+43137,AO-92
