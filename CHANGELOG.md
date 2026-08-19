@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.2 - 2026-08-19
+
+- Fixed tagged-release gating so **any pushed tag** triggers the release path, not only tags beginning with `v`.
+- Release job now uses `github.ref_type == 'tag'` and explicitly checks that both native build jobs succeeded.
+- Added `always()` to the release job condition so dependency evaluation is explicit while still refusing to publish if either platform build fails.
+- Synchronized the package `__version__` value with project metadata.
+
+
 ## 0.2.1 - 2026-08-19
 
 - Added automatic GitHub Release publication for pushed `v*` tags.

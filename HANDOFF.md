@@ -1,4 +1,4 @@
-# KeplerSet 0.2.1 Development Handoff
+# KeplerSet 0.2.2 Development Handoff
 
 ## Purpose
 
@@ -122,3 +122,8 @@ If the release already exists (for example after rerunning a failed workflow), `
 - Continue using numeric NORAD IDs internally.
 - Preserve native Space-Track output for all formats except the explicit 3LE alias operation.
 - Do not persist the Space-Track password in plaintext settings.
+
+
+## Tagged release fix (0.2.2)
+
+The release workflow accepts any pushed tag (`tags: ["**"]`) and gates publishing with `github.ref_type == 'tag'`. This avoids the previous mismatch where a non-`v` tag could fail to trigger the release path while an ordinary `main` push still built artifacts. The release job also checks both required build results explicitly.

@@ -264,11 +264,11 @@ The workflow uses current GitHub-provided Actions major versions (`checkout@v7`,
 
 ### Automatic tagged releases
 
-Pushing a tag whose name begins with `v` automatically turns that workflow run into a release build. For example:
+Pushing any tag automatically turns that workflow run into a release build. Both `0.2.2` and `v0.2.2` style tags are accepted. For example:
 
 ```bash
-git tag -a v0.2.1 -m "KeplerSet 0.2.1"
-git push origin v0.2.1
+git tag -a 0.2.2 -m "KeplerSet 0.2.2"
+git push origin 0.2.2
 ```
 
 After both native build jobs succeed, the release job:
